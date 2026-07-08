@@ -1,0 +1,50 @@
+#include <Wire.h>
+#include <LiquidCrystal.h>
+#include <SD.h>
+#include <SPI.h>
+
+#define MQ135_PIN A0
+#define SD_PIN 4
+
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+File dataFile;
+
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  SD.begin(SD_PIN);
+  
+  lcd.print("Air Quality Init");
+  dataFile = SD.open("airdata.csv", FILE_WRITE);
+  dataFile.println("Time,AirQuality(PPM),Status");
+  dataFile.close();
+  delay(2000);
+}
+
+void loop() {
+  int sensorValue = analogRead(MQ135_PIN);
+  float voltage = sensorValue * (5.0 / 1023.0);
+  int airQuality = map(sensorValue, 0, 1023, 0, 500); // PPM approx
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("AQI: ");
+  lcd.print(airQuality);
+  lcd.print(" PPM");
+  
+  lcd.setCursor(0,1);
+  if(airQuality < 200) lcd.print("Good");
+  else if(airQuality < 400) lcd.print("Moderate");
+  else lcd.print("Poor");
+
+  // SD card lo save
+  dataFile = SD.open("airdata.csv", FILE_WRITE);
+  dataFile.print(millis()); dataFile.print(",");
+  dataFile.print(airQuality); dataFile.print(",");
+  if(airQuality < 200) dataFile.println("Good");
+  else if(airQuality < 400) dataFile.println("Moderate");
+  else dataFile.println("Poor");
+  dataFile.close();
+
+  Serial.println(airQuality);
+  delay(3000); // 
